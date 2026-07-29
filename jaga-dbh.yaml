@@ -15,15 +15,15 @@
 substitutions:
   # ---------------------------------------------------------------------------
   # Verplicht - override deze in je eigen config (zie example.yaml):
-  #   kamer, api_key, ota_password, bthome_mac, bthome_bindkey,
-  #   dallas_aanvoer, dallas_retour
+  #   kamer, api_key, bthome_mac, bthome_bindkey, dallas_aanvoer, dallas_retour
   # ---------------------------------------------------------------------------
   kamer: "kamer"                    # alleen kleine letters/cijfers/streepjes
   bthome_mac: "00:00:00:00:00:00"
   bthome_bindkey: "00000000000000000000000000000000"
   dallas_aanvoer: "0x0000000000000000"
   dallas_retour: "0x0000000000000000"
-  # api_key en ota_password hebben bewust geen default
+  # api_key heeft bewust geen default
+  fallback_ap_password: "jaga-fallback" # wachtwoord van de fallback hotspot
 
   # --------------------------- board & algemeen ------------------------------
   board: esp32-c3-devkitm-1         # werkt ook voor de Nologo C3 SuperMini
@@ -39,9 +39,8 @@ substitutions:
   sn74hc595_latch_pin: GPIO20
   adc_bemf_pin: GPIO0               # BEMF meting kanaal 1
   onewire_pin: GPIO6
-  status_led_pin: GPIO8
-  i2c_sda_pin: GPIO5                # GP8403 DAC
-  i2c_scl_pin: GPIO7
+  i2c_sda_pin: GPIO8                # GP8403 DAC
+  i2c_scl_pin: GPIO9
   gp8403_address: "0x5F"
 
   # --------------------------- klep (kanaal 1) -------------------------------

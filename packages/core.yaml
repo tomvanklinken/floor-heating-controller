@@ -34,7 +34,6 @@ api:
 
 ota:
   - platform: esphome
-    password: ${ota_password}
 
 safe_mode:
 
@@ -58,12 +57,4 @@ logger:
     jaga_valve: DEBUG
     jaga_climate: DEBUG
 
-light:
-  - platform: status_led
-    name: "Status LED"
-    id: status_led_light
-    pin:
-      number: ${status_led_pin}
-      inverted: true
-      ignore_strapping_warning: true # GPIO8 is de onboard LED van de C3 SuperMini
-    restore_mode: ALWAYS_OFF
+# Geen status-LED: GPIO8 (onboard LED) wordt gebruikt voor de I2C-bus

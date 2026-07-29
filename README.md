@@ -20,8 +20,9 @@ omgebouwd naar één klepkanaal op de hardware van
 | 2x DS18B20 (1-wire, GPIO6) | aanvoer- en retourtemperatuur |
 | BTHome thermometer (pvvx firmware) | kamertemperatuur + luchtvochtigheid via BLE |
 
-Standaard I2C-pinnen voor de GP8403: SDA = GPIO5, SCL = GPIO7
-(aanpasbaar via de substitutions `i2c_sda_pin` / `i2c_scl_pin`).
+Standaard I2C-pinnen voor de GP8403: SDA = GPIO8, SCL = GPIO9
+(aanpasbaar via de substitutions `i2c_sda_pin` / `i2c_scl_pin`). GPIO8 is
+daardoor bezet; er is dus geen status-LED.
 
 ## Werking
 
@@ -47,7 +48,6 @@ substitutions:
   bthome_mac: "38:1F:8D:C5:B5:E2"
   bthome_bindkey: "geheim"
   api_key: "geheim"                  # openssl rand -base64 32
-  ota_password: "geheim"
   dallas_aanvoer: "0x7b0725400b8d9528"
   dallas_retour: "0x7807254009846228"
 
@@ -60,7 +60,9 @@ packages:
 ```
 
 WiFi komt uit de `secrets.yaml` van je ESPHome config-map
-(`wifi_ssid` / `wifi_password`).
+(`wifi_ssid` / `wifi_password`). Als wifi niet lukt start een fallback
+hotspot `radiator-<kamer>` (wachtwoord: `jaga-fallback`, aanpasbaar via de
+substitution `fallback_ap_password`).
 
 Alle overige defaults (doeltemperaturen, PID-parameters, pinnen, BEMF-trigger,
 enz.) staan in [jaga-dbh.yaml](jaga-dbh.yaml) en kun je per apparaat overriden

@@ -12,7 +12,6 @@ substitutions:
   bthome_mac: "38:1F:8D:C5:B5:E2"
   bthome_bindkey: "geheim"
   api_key: "geheim" # 32-byte base64, genereer met: openssl rand -base64 32
-  ota_password: "geheim" # ook het wachtwoord van de fallback hotspot
   dallas_aanvoer: "0x7b0725400b8d9528"
   dallas_retour: "0x7807254009846228"
 
