@@ -1,0 +1,245 @@
+# Ruimtethermostaat (verwarmen + koelen) met ventilatorstanden in de
+# climate card, en een koel-PID die de retourtemperatuur op
+# dauwpunt + marge houdt (condensbeveiliging bij light cooling).
+#
+# - Verwarmen: klep volledig open, ventilator op gekozen stand.
+# - Koelen:    de PID moduleert de klep zodat de retourtemperatuur niet
+#              onder dauwpunt + marge zakt; ventilator op gekozen stand.
+# - Idle/uit:  klep dicht, ventilator uit.
+
+climate:
+  - platform: thermostat
+    id: room_thermostat
+    name: "Thermostaat"
+    sensor: kamer_temperatuur
+    humidity_sensor: kamer_luchtvochtigheid
+    startup_delay: true
+    on_boot_restore_from: memory
+    visual:
+      min_temperature: ${visual_min_temperature}
+      max_temperature: ${visual_max_temperature}
+      temperature_step: ${visual_temperature_step}
+    min_heating_off_time: ${min_heating_off_time}
+    min_heating_run_time: ${min_heating_run_time}
+    min_cooling_off_time: ${min_cooling_off_time}
+    min_cooling_run_time: ${min_cooling_run_time}
+    min_idle_time: 30s
+    min_fan_mode_switching_time: 30s
+    heat_deadband: 0.3 °C
+    heat_overrun: 0.3 °C
+    cool_deadband: 0.3 °C
+    cool_overrun: 0.3 °C
+    default_preset: Thuis
+    preset:
+      - name: Thuis
+        default_target_temperature_low: ${default_target_temperature_heat}
+        default_target_temperature_high: ${default_target_temperature_cool}
+        mode: HEAT # verwarmen is de standaard
+        fan_mode: LOW
+    heat_action:
+      - climate.control:
+          id: cooling_pid
+          mode: "OFF"
+      - cover.open: valve_cover
+      - script.execute: update_fan
+    cool_action:
+      - script.execute: start_cooling
+      - script.execute: update_fan
+    idle_action:
+      - climate.control:
+          id: cooling_pid
+          mode: "OFF"
+      - cover.close: valve_cover
+      - script.execute: update_fan
+    fan_mode_low_action:
+      - script.execute: update_fan
+    fan_mode_medium_action:
+      - script.execute: update_fan
+    fan_mode_high_action:
+      - script.execute: update_fan
+
+  # Koel-PID: houdt de retourtemperatuur op dauwpunt + marge door de
+  # proportionele klep aan te sturen. Doeltemperatuur wordt live bijgewerkt
+  # zodra het dauwpunt verandert.
+  - platform: pid
+    id: cooling_pid
+    name: "Koeling retour PID"
+    sensor: retour_temperatuur
+    default_target_temperature: 16 °C # wordt overschreven met dauwpunt + marge
+    cool_output: valve_output
+    control_parameters:
+      kp: ${cool_pid_kp}
+      ki: ${cool_pid_ki}
+      kd: ${cool_pid_kd}
+      output_averaging_samples: 2
+      derivative_averaging_samples: 5
+    visual:
+      min_temperature: 5 °C
+      max_temperature: 35 °C
+      temperature_step: 0.1 °C
+
+number:
+  - platform: template
+    name: "Dauwpunt marge"
+    id: dauwpunt_marge
+    entity_category: config
+    unit_of_measurement: "°C"
+    optimistic: true
+    min_value: 0.0
+    max_value: 5.0
+    step: 0.05
+    restore_value: true
+    initial_value: ${dauwpunt_marge_initial}
+    on_value:
+      - script.execute: update_cooling_target
+
+  - platform: template
+    name: "Koel PID Kp"
+    id: cool_kp
+    entity_category: config
+    optimistic: true
+    min_value: 0.0
+    max_value: 2.0
+    step: 0.01
+    restore_value: true
+    initial_value: ${cool_pid_kp}
+    icon: mdi:chart-line-variant
+    on_value:
+      - climate.pid.set_control_parameters:
+          id: cooling_pid
+          kp: !lambda "return x;"
+          ki: !lambda "return id(cooling_pid).get_ki();"
+          kd: !lambda "return id(cooling_pid).get_kd();"
+
+  - platform: template
+    name: "Koel PID Ki"
+    id: cool_ki
+    entity_category: config
+    optimistic: true
+    min_value: 0.0
+    max_value: 0.01
+    step: 0.0001
+    restore_value: true
+    initial_value: ${cool_pid_ki}
+    icon: mdi:math-integral-box
+    on_value:
+      - climate.pid.set_control_parameters:
+          id: cooling_pid
+          kp: !lambda "return id(cooling_pid).get_kp();"
+          ki: !lambda "return x;"
+          kd: !lambda "return id(cooling_pid).get_kd();"
+
+  - platform: template
+    name: "Koel PID Kd"
+    id: cool_kd
+    entity_category: config
+    optimistic: true
+    min_value: 0.0
+    max_value: 20.0
+    step: 0.1
+    restore_value: true
+    initial_value: ${cool_pid_kd}
+    icon: mdi:delta
+    on_value:
+      - climate.pid.set_control_parameters:
+          id: cooling_pid
+          kp: !lambda "return id(cooling_pid).get_kp();"
+          ki: !lambda "return id(cooling_pid).get_ki();"
+          kd: !lambda "return x;"
+
+sensor:
+  - platform: pid
+    name: "Koel PID klepstand"
+    climate_id: cooling_pid
+    type: RESULT
+    entity_category: diagnostic
+
+script:
+  # Ventilator volgt de fan mode van de thermostaat; alleen aan als er
+  # daadwerkelijk verwarmd of gekoeld wordt.
+  - id: update_fan
+    mode: restart
+    then:
+      - lambda: |-
+          auto action = id(room_thermostat).action;
+          bool demand = (action == CLIMATE_ACTION_HEATING) || (action == CLIMATE_ACTION_COOLING);
+          if (!demand) {
+            if (id(radiator_fan).state) {
+              auto call = id(radiator_fan).turn_off();
+              call.perform();
+              ESP_LOGD("jaga_climate", "Ventilator uit (geen warmte/koelvraag)");
+            }
+            return;
+          }
+          int speed = 1;
+          if (id(room_thermostat).fan_mode.has_value()) {
+            auto fm = *id(room_thermostat).fan_mode;
+            if (fm == CLIMATE_FAN_LOW) speed = 1;
+            else if (fm == CLIMATE_FAN_MEDIUM) speed = 2;
+            else if (fm == CLIMATE_FAN_HIGH) speed = 3;
+          }
+          if (!id(radiator_fan).state || id(radiator_fan).speed != speed) {
+            auto call = id(radiator_fan).turn_on();
+            call.set_speed(speed);
+            call.perform();
+            ESP_LOGD("jaga_climate", "Ventilator aan op stand %d", speed);
+          }
+
+  - id: start_cooling
+    then:
+      - script.execute: update_cooling_target
+      - climate.control:
+          id: cooling_pid
+          mode: COOL
+
+  # Retour-doeltemperatuur = dauwpunt + marge
+  - id: update_cooling_target
+    then:
+      - lambda: |-
+          if (isnan(id(dauwpunt).state)) {
+            ESP_LOGW("jaga_climate", "Dauwpunt onbekend, koeldoel niet bijgewerkt");
+            return;
+          }
+          float target = id(dauwpunt).state + id(dauwpunt_marge).state;
+          auto call = id(cooling_pid).make_call();
+          call.set_target_temperature(target);
+          call.perform();
+          ESP_LOGD("jaga_climate", "Koeldoel retour: %.2f C (dauwpunt %.2f + marge %.2f)",
+                   target, id(dauwpunt).state, id(dauwpunt_marge).state);
+
+  # Bewaakt de consistentie tussen thermostaat, koel-PID, klep en ventilator.
+  - id: enforce_state
+    then:
+      - lambda: |-
+          auto action = id(room_thermostat).action;
+          // Koel-PID mag alleen draaien als de thermostaat om koeling vraagt
+          if (id(cooling_pid).mode != CLIMATE_MODE_OFF && action != CLIMATE_ACTION_COOLING) {
+            ESP_LOGW("jaga_climate", "Koel-PID actief zonder koelvraag - uitgezet");
+            auto call = id(cooling_pid).make_call();
+            call.set_mode(CLIMATE_MODE_OFF);
+            call.perform();
+          }
+          // Koelen zonder geldig dauwpunt is onveilig (condens) -> stoppen
+          if (id(cooling_pid).mode != CLIMATE_MODE_OFF && isnan(id(dauwpunt).state)) {
+            ESP_LOGW("jaga_climate", "Dauwpunt onbekend - koeling gestopt");
+            auto call = id(cooling_pid).make_call();
+            call.set_mode(CLIMATE_MODE_OFF);
+            call.perform();
+          }
+          // Klep dicht als er niets actief is
+          if ((action == CLIMATE_ACTION_OFF || action == CLIMATE_ACTION_IDLE)
+              && id(cooling_pid).mode == CLIMATE_MODE_OFF
+              && id(valve_cover).position > 0.011f
+              && id(valve_cover).current_operation == COVER_OPERATION_IDLE
+              && !id(calibrate_valve).is_running()) {
+            ESP_LOGD("jaga_climate", "Klep stond open zonder vraag - sluiten");
+            auto call = id(valve_cover).make_call();
+            call.set_command_close();
+            call.perform();
+          }
+      - script.execute: update_fan
+
+interval:
+  - interval: 60s
+    then:
+      - script.execute: enforce_state

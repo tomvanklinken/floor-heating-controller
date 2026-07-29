@@ -1,0 +1,16 @@
+button:
+  - platform: restart
+    name: "Herstart"
+    id: restart_button
+    entity_category: diagnostic
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi signaal"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 5min
+    entity_category: diagnostic

@@ -1,0 +1,28 @@
+# =============================================================================
+# Voorbeeld: dit is alles wat je in Home Assistant (ESPHome dashboard) nodig
+# hebt per radiator. Alleen de substitutions aanpassen.
+#
+# Vereist in de secrets.yaml van je ESPHome config-map:
+#   wifi_ssid: "..."
+#   wifi_password: "..."
+# =============================================================================
+
+substitutions:
+  kamer: "stein" # alleen kleine letters/cijfers/streepjes -> device: radiator-stein
+  bthome_mac: "38:1F:8D:C5:B5:E2"
+  bthome_bindkey: "geheim"
+  api_key: "geheim" # 32-byte base64, genereer met: openssl rand -base64 32
+  ota_password: "geheim" # ook het wachtwoord van de fallback hotspot
+  dallas_aanvoer: "0x7b0725400b8d9528"
+  dallas_retour: "0x7807254009846228"
+
+  # Optioneel: alle defaults uit jaga-dbh.yaml kun je hier overriden, bijv:
+  # default_target_temperature_heat: "20 °C"
+  # dauwpunt_marge_initial: "1.0"
+
+packages:
+  jaga_dbh:
+    url: https://github.com/tomvanklinken/floor-heating-controller
+    ref: main
+    files: [jaga-dbh.yaml]
+    refresh: 1d

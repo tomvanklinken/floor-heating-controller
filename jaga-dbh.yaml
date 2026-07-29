@@ -1,0 +1,86 @@
+# =============================================================================
+# Jaga DBH controller (radiator met ventilatoren, verwarmen + light cooling)
+#
+# Hardware:
+#   - Nologo ESP32-C3 SuperMini op het esp32_8ch_motor_shield
+#     (https://github.com/nliaudat/esp32_8ch_motor_shield) - alleen kanaal 1
+#   - GP8403 0-10V DAC (I2C) voor de Jaga ventilator-aansturing
+#   - 2x Dallas DS18B20 op de 1-wire bus (aanvoer + retour)
+#   - BTHome (pvvx) BLE thermometer voor kamertemperatuur + luchtvochtigheid
+#
+# Gebruik vanuit Home Assistant / ESPHome dashboard: zie example.yaml
+# Alleen substitutions overriden; deze file bevat de defaults.
+# =============================================================================
+
+substitutions:
+  # ---------------------------------------------------------------------------
+  # Verplicht - override deze in je eigen config (zie example.yaml):
+  #   kamer, api_key, ota_password, bthome_mac, bthome_bindkey,
+  #   dallas_aanvoer, dallas_retour
+  # ---------------------------------------------------------------------------
+  kamer: "kamer"                    # alleen kleine letters/cijfers/streepjes
+  bthome_mac: "00:00:00:00:00:00"
+  bthome_bindkey: "00000000000000000000000000000000"
+  dallas_aanvoer: "0x0000000000000000"
+  dallas_retour: "0x0000000000000000"
+  # api_key en ota_password hebben bewust geen default
+
+  # --------------------------- board & algemeen ------------------------------
+  board: esp32-c3-devkitm-1         # werkt ook voor de Nologo C3 SuperMini
+  log_level: DEBUG
+  timezone: "Europe/Amsterdam"
+  reboot_days_of_week: "MON"        # wekelijkse onderhouds-reboot
+  reboot_hours: "5"
+  reboot_minutes: "0"
+
+  # --------------------------- pinnen (motor shield C3) ----------------------
+  sn74hc595_data_pin: GPIO21
+  sn74hc595_clock_pin: GPIO10
+  sn74hc595_latch_pin: GPIO20
+  adc_bemf_pin: GPIO0               # BEMF meting kanaal 1
+  onewire_pin: GPIO6
+  status_led_pin: GPIO8
+  i2c_sda_pin: GPIO5                # GP8403 DAC
+  i2c_scl_pin: GPIO7
+  gp8403_address: "0x5F"
+
+  # --------------------------- klep (kanaal 1) -------------------------------
+  valve_open_sr_pin: "0"            # sn74hc595 pin -> L9110s IA
+  valve_close_sr_pin: "1"           # sn74hc595 pin -> L9110s IB
+  valve_run_duration: "60s"
+  valve_max_duration: "65s"
+  bemf_trigger_initial_value: "0.650"  # boards >= v61 : 0.650 | < v60 : 0.105
+  adc_zero_calibration: "0.005"     # typisch 0.005 voor esp32-c3
+  min_movement_initial: "5"         # minimale klepbeweging in %
+  onboot_valve_calibration_delay: "1min"
+
+  # --------------------------- thermostaat -----------------------------------
+  default_target_temperature_heat: "21 °C"
+  default_target_temperature_cool: "24 °C"
+  visual_min_temperature: "10 °C"
+  visual_max_temperature: "30 °C"
+  visual_temperature_step: "0.1 °C"
+  min_heating_off_time: "300s"
+  min_heating_run_time: "300s"
+  min_cooling_off_time: "300s"
+  min_cooling_run_time: "300s"
+
+  # --------------------------- koeling / dauwpunt ----------------------------
+  dauwpunt_marge_initial: "0.75"    # retour-doel = dauwpunt + deze marge (°C)
+  cool_pid_kp: "0.3"
+  cool_pid_ki: "0.0005"
+  cool_pid_kd: "0.0"
+
+  # --------------------------- sensoren --------------------------------------
+  dallas_update_interval: "15s"
+
+packages:
+  core: !include packages/core.yaml
+  wifi: !include packages/wifi.yaml
+  time: !include packages/time.yaml
+  diagnostics: !include packages/diagnostics.yaml
+  bthome: !include packages/bthome.yaml
+  dallas: !include packages/dallas.yaml
+  fan: !include packages/fan.yaml
+  valve: !include packages/valve.yaml
+  climate: !include packages/climate.yaml

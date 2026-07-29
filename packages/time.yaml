@@ -1,0 +1,13 @@
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: ${timezone}
+    servers: [0.pool.ntp.org, 1.pool.ntp.org, 2.pool.ntp.org]
+    on_time:
+      # wekelijkse onderhouds-reboot
+      - seconds: 0
+        minutes: ${reboot_minutes}
+        hours: ${reboot_hours}
+        days_of_week: ${reboot_days_of_week}
+        then:
+          - button.press: restart_button

@@ -1,0 +1,69 @@
+# Board, API, OTA en logging voor de Nologo ESP32-C3 SuperMini
+esphome:
+  name: radiator-${kamer}
+  friendly_name: "Radiator ${kamer}"
+  on_boot:
+    priority: -200
+    then:
+      - delay: ${onboot_valve_calibration_delay}
+      - script.execute: calibrate_valve
+  project:
+    name: "tomvanklinken.jaga-dbh-controller"
+    version: "1.0.0"
+  # ESP32-C3 boot loop fix
+  platformio_options:
+    board_build.f_flash: 40000000L
+    board_build.flash_mode: dio
+    board_build.flash_size: 4MB
+
+esp32:
+  board: ${board}
+  variant: esp32c3
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_COMPILER_OPTIMIZATION_SIZE: y
+
+preferences:
+  flash_write_interval: 60min
+
+api:
+  encryption:
+    key: ${api_key}
+  reboot_timeout: 30min
+
+ota:
+  - platform: esphome
+    password: ${ota_password}
+
+safe_mode:
+
+logger:
+  level: ${log_level}
+  logs:
+    adc: NONE
+    sensor: ERROR
+    binary_sensor: INFO
+    cover: INFO
+    switch: INFO
+    climate: INFO
+    endstop: INFO
+    text_sensor: ERROR
+    dallas.temp.sensor: ERROR
+    gpio.one_wire: INFO
+    esp32.preferences: NONE
+    safe_mode: NONE
+    esp32_ble_tracker: INFO
+    ### custom tags
+    jaga_valve: DEBUG
+    jaga_climate: DEBUG
+
+light:
+  - platform: status_led
+    name: "Status LED"
+    id: status_led_light
+    pin:
+      number: ${status_led_pin}
+      inverted: true
+      ignore_strapping_warning: true # GPIO8 is de onboard LED van de C3 SuperMini
+    restore_mode: ALWAYS_OFF

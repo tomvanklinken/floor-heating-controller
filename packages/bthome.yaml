@@ -1,0 +1,35 @@
+# Kamertemperatuur + luchtvochtigheid via BTHome (pvvx firmware) en
+# dauwpuntberekening voor de koelbeveiliging.
+external_components:
+  - source: github://chbgdn/bthome_mithermometer
+    components: [bthome_mithermometer]
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+
+bluetooth_proxy:
+  active: false
+
+bthome_mithermometer:
+  - id: bthome_device
+    mac_address: ${bthome_mac}
+    bindkey: ${bthome_bindkey}
+
+sensor:
+  - platform: bthome_mithermometer
+    id: bthome_device
+    temperature:
+      name: "Kamer temperatuur"
+      id: kamer_temperatuur
+    humidity:
+      name: "Kamer luchtvochtigheid"
+      id: kamer_luchtvochtigheid
+
+  - platform: dew_point
+    name: "Dauwpunt"
+    id: dauwpunt
+    temperature: kamer_temperatuur
+    humidity: kamer_luchtvochtigheid
+    on_value:
+      - script.execute: update_cooling_target

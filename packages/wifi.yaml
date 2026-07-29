@@ -1,0 +1,11 @@
+# WiFi: ssid/wachtwoord komen uit secrets.yaml van je ESPHome config-map
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Fallback hotspot als wifi niet lukt (wachtwoord = ota_password)
+  ap:
+    ssid: "radiator-${kamer}"
+    password: ${ota_password}
+
+captive_portal:

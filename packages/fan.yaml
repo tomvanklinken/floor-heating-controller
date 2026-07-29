@@ -1,0 +1,25 @@
+# Jaga DBH ventilator via GP8403 0-10V DAC (kanaal 0)
+i2c:
+  id: i2c_bus
+  sda: ${i2c_sda_pin}
+  scl: ${i2c_scl_pin}
+  scan: true
+
+gp8403:
+  id: fan_dac
+  address: ${gp8403_address}
+  voltage: 10V
+
+output:
+  - platform: gp8403
+    id: fan_dac_output
+    gp8403_id: fan_dac
+    channel: 0
+
+fan:
+  - platform: speed
+    id: radiator_fan
+    name: "Ventilator"
+    output: fan_dac_output
+    speed_count: 3
+    restore_mode: RESTORE_DEFAULT_OFF

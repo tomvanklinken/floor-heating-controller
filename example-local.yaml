@@ -1,0 +1,17 @@
+# Lokale variant van example.yaml: gebruikt de packages uit deze repo in
+# plaats van GitHub. Handig voor ontwikkeling en compile-tests:
+#
+#   esphome config example-local.yaml
+#   esphome compile example-local.yaml
+
+substitutions:
+  kamer: "test"
+  bthome_mac: "38:1F:8D:C5:B5:E2"
+  bthome_bindkey: "00112233445566778899aabbccddeeff"
+  api_key: "y4Bb/0Ur7xoogEUdEX3HNsAjB36ueps6kfVIzalYzmo="
+  ota_password: "changeme-8chars"
+  dallas_aanvoer: "0x7b0725400b8d9528"
+  dallas_retour: "0x7807254009846228"
+
+packages:
+  jaga_dbh: !include jaga-dbh.yaml

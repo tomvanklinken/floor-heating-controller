@@ -1,0 +1,174 @@
+# Proportionele klepaansturing (kanaal 1 van het esp32_8ch_motor_shield).
+# De motorpositie wordt bepaald via BEMF-endstop detectie, zoals in het
+# originele floor-heating-controller project.
+
+# SN74HC595 shift registers -> L9110s motordrivers
+sn74hc595:
+  - id: sn74hc595_hub
+    data_pin: ${sn74hc595_data_pin}
+    clock_pin: ${sn74hc595_clock_pin}
+    latch_pin: ${sn74hc595_latch_pin}
+    sr_count: 2
+
+switch:
+  - platform: gpio
+    id: valve_open_pin # L9110s IA
+    internal: true
+    pin:
+      sn74hc595: sn74hc595_hub
+      number: ${valve_open_sr_pin}
+      inverted: false
+    on_turn_on: # interlock: nooit beide richtingen tegelijk
+      - switch.turn_off: valve_close_pin
+      - delay: 200ms
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    id: valve_close_pin # L9110s IB
+    internal: true
+    pin:
+      sn74hc595: sn74hc595_hub
+      number: ${valve_close_sr_pin}
+      inverted: false
+    on_turn_on:
+      - switch.turn_off: valve_open_pin
+      - delay: 200ms
+    restore_mode: ALWAYS_OFF
+
+# BEMF meting: detecteert wanneer de motor stilstaat (eindstop bereikt)
+sensor:
+  - platform: adc
+    pin: ${adc_bemf_pin}
+    id: bemf_adc
+    name: "BEMF"
+    internal: true
+    update_interval: 50ms
+    attenuation: 0db
+    accuracy_decimals: 3
+    filters:
+      - offset: ${adc_zero_calibration}
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 5
+
+number:
+  - platform: template
+    name: "BEMF trigger"
+    id: bemf_trigger
+    entity_category: config
+    optimistic: true
+    min_value: 0.005
+    max_value: 1.50
+    step: 0.005
+    restore_value: true
+    initial_value: ${bemf_trigger_initial_value}
+
+  - platform: template
+    name: "Min klepbeweging %"
+    id: min_movement
+    entity_category: config
+    optimistic: true
+    min_value: 0
+    max_value: 25
+    step: 1
+    restore_value: true
+    initial_value: ${min_movement_initial}
+
+binary_sensor:
+  - platform: template
+    id: bemf_endstop
+    internal: true
+    lambda: return (id(bemf_adc).state >= id(bemf_trigger).state);
+    on_press:
+      then:
+        - lambda: |-
+            if (id(valve_cover).current_operation == COVER_OPERATION_OPENING) {
+              auto call = id(valve_cover).make_call();
+              call.set_command_stop();
+              call.perform();
+              id(valve_cover).position = 1.0; // 1.0 = 100% = OPEN
+              id(valve_cover).publish_state();
+              ESP_LOGD("jaga_valve", "Klep open-eindstop bereikt bij %.3f V", id(bemf_adc).state);
+            } else if (id(valve_cover).current_operation == COVER_OPERATION_CLOSING) {
+              auto call = id(valve_cover).make_call();
+              call.set_command_stop();
+              call.perform();
+              id(valve_cover).position = 0.0; // 0.0 = 0% = DICHT
+              id(valve_cover).publish_state();
+              ESP_LOGD("jaga_valve", "Klep dicht-eindstop bereikt bij %.3f V", id(bemf_adc).state);
+            }
+
+cover:
+  - platform: endstop
+    name: "Klep"
+    id: valve_cover
+    device_class: shutter
+    open_action:
+      - switch.turn_on: valve_open_pin
+      - switch.turn_off: valve_close_pin
+    open_duration: ${valve_run_duration}
+    open_endstop: bemf_endstop
+    close_action:
+      - switch.turn_on: valve_close_pin
+      - switch.turn_off: valve_open_pin
+    close_duration: ${valve_run_duration}
+    close_endstop: bemf_endstop
+    stop_action:
+      - switch.turn_off: valve_open_pin
+      - switch.turn_off: valve_close_pin
+    max_duration: ${valve_max_duration}
+
+# Float output (0.0 - 1.0) voor de koel-PID: vertaalt PID-uitgang naar
+# kleppositie, met hysterese om constant kleine bewegingen te voorkomen.
+output:
+  - platform: template
+    id: valve_output
+    type: float
+    write_action:
+      - lambda: |-
+          float target = state;
+          float pos = id(valve_cover).position;
+          float min_move = id(min_movement).state / 100.0f;
+          if (target < min_move) {
+            if (pos > 0.001f) {
+              auto call = id(valve_cover).make_call();
+              call.set_command_close();
+              call.perform();
+            }
+          } else if (fabsf(pos - target) >= min_move) {
+            auto call = id(valve_cover).make_call();
+            call.set_position(target);
+            call.perform();
+          }
+          ESP_LOGD("jaga_valve", "PID klepdoel %.3f, huidige positie %.3f", target, pos);
+
+# Kalibratie: klep een paar keer heen en weer, eindigt gesloten.
+script:
+  - id: calibrate_valve
+    then:
+      - logger.log:
+          format: "Klep kalibreren"
+          tag: jaga_valve
+      - cover.close: valve_cover
+      - delay: 5s
+      - cover.open: valve_cover
+      - delay: 5s
+      - cover.close: valve_cover
+      - delay: 5s
+      - cover.open: valve_cover
+      - delay: 5s
+      - cover.close: valve_cover
+      - delay: 5s
+      - cover.open: valve_cover
+      - delay: 60s
+      - cover.close: valve_cover
+      - delay: 60s
+      - cover.close: valve_cover
+      - delay: 60s
+      - cover.close: valve_cover
+
+button:
+  - platform: template
+    name: "Klep kalibreren"
+    on_press:
+      - script.execute: calibrate_valve

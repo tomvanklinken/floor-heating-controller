@@ -1,4 +1,12 @@
 # change log 
+## 2026-07-29 - Jaga DBH controller rewrite:
+* omgebouwd van 8-kanaals vloerverwarming naar 1-kanaals Jaga DBH controller (verwarmen + light cooling)
+* herbruikbaar ESPHome package: in HA alleen substitutions + remote package (zie example.yaml)
+* board: Nologo ESP32-C3 SuperMini
+* kamertemperatuur/luchtvochtigheid via BTHome BLE (bthome_mithermometer) + dauwpuntberekening
+* Jaga ventilator via GP8403 0-10V DAC, 3 standen als fan mode in de climate card
+* koelen: PID houdt retourtemperatuur (Dallas) op dauwpunt + marge via de proportionele klep
+* ongebruikte features verwijderd (7 extra kanalen, ESPNOW pomp, web_server, homeassistant-sensoren)
 ## v124:
 * fix psram for ESP32 boards
 * use new ADC lib (https://github.com/esphome/esphome/pull/9021)
