@@ -42,6 +42,12 @@ sensor:
     id: bemf_adc
     name: "BEMF"
     internal: true
+    on_value: # BEMF in de log zolang de klep beweegt, om de trigger te tunen
+      - lambda: |-
+          if (id(valve_cover).current_operation != COVER_OPERATION_IDLE) {
+            ESP_LOGD("jaga_valve", "BEMF %.3f V (trigger %.3f, positie %.0f%%)",
+                     x, id(bemf_trigger).state, id(valve_cover).position * 100.0f);
+          }
     update_interval: 50ms
     attenuation: 0db
     accuracy_decimals: 3
