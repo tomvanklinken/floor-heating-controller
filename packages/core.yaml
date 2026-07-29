@@ -5,6 +5,11 @@ esphome:
   on_boot:
     priority: -200
     then:
+      # Koel-PID altijd uit opstarten; de thermostaat zet hem weer aan
+      # zodra er koelvraag is (RESTORE_DEFAULT_OFF gedrag)
+      - climate.control:
+          id: cooling_pid
+          mode: "OFF"
       - delay: ${onboot_valve_calibration_delay}
       - script.execute: calibrate_valve
   project:

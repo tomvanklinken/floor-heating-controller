@@ -126,6 +126,11 @@ output:
     type: float
     write_action:
       - lambda: |-
+          // De PID schrijft ook in OFF-stand continu 0; alleen reageren
+          // als er echt gekoeld wordt, anders blokkeert dit handmatige
+          // bediening en het openen bij verwarmen.
+          if (id(cooling_pid).mode != CLIMATE_MODE_COOL)
+            return;
           float target = state;
           float pos = id(valve_cover).position;
           float min_move = id(min_movement).state / 100.0f;
