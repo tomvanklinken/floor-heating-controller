@@ -63,6 +63,12 @@ substitutions:
   min_cooling_off_time: "300s"
   min_cooling_run_time: "300s"
 
+  # --------------------------- ventilator ------------------------------------
+  # De Jaga DBH kent 3 standen; AUTO kiest de stand op basis van het
+  # verschil tussen kamertemperatuur en setpoint:
+  fan_auto_medium_error: "1.0" # vanaf dit verschil (°C) stand MEDIUM
+  fan_auto_high_error: "2.0"   # vanaf dit verschil (°C) stand HIGH
+
   # --------------------------- koeling / dauwpunt ----------------------------
   dauwpunt_marge_initial: "0.75"    # retour-doel = dauwpunt + deze marge (°C)
   cool_pid_kp: "0.3"

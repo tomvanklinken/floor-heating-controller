@@ -26,9 +26,12 @@ daardoor bezet; er is dus geen status-LED.
 
 ## Werking
 
-- **Thermostaat** (climate entity) met verwarmen én koelen, verwarmen als
-  standaard. Ventilator (3 standen) zit als fan mode in de climate card en
-  draait alleen bij warmte- of koelvraag.
+- **Thermostaat** (climate entity) met verwarmen én koelen. De ventilator
+  (3 standen, zoals de Jaga DBH) zit als fan mode in de climate card en
+  draait alleen bij warmte- of koelvraag: LOW/MEDIUM/HIGH zijn vaste
+  standen, **AUTO** (standaard) kiest de stand op basis van het verschil
+  t.o.v. het setpoint (MEDIUM vanaf `fan_auto_medium_error` = 1 °C, HIGH
+  vanaf `fan_auto_high_error` = 2 °C).
 - **Verwarmen**: klep volledig open, ventilator op de gekozen stand.
 - **Koelen**: een PID-regelaar moduleert de proportionele klep zodat de
   **retourtemperatuur op dauwpunt + marge** blijft (standaard +0,75 °C,

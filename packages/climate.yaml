@@ -35,7 +35,7 @@ climate:
         default_target_temperature_low: ${default_target_temperature_heat}
         default_target_temperature_high: ${default_target_temperature_cool}
         mode: "OFF" # RESTORE_DEFAULT_OFF: herstelt uit geheugen, anders uit
-        fan_mode: LOW
+        fan_mode: AUTO
     heat_action:
       - climate.control:
           id: cooling_pid
@@ -56,6 +56,8 @@ climate:
     fan_mode_medium_action:
       - script.execute: update_fan
     fan_mode_high_action:
+      - script.execute: update_fan
+    fan_mode_auto_action:
       - script.execute: update_fan
 
   # Koel-PID: houdt de retourtemperatuur op dauwpunt + marge door de
@@ -156,14 +158,17 @@ sensor:
 
 script:
   # Ventilator volgt de fan mode van de thermostaat; alleen aan als er
-  # daadwerkelijk verwarmd of gekoeld wordt.
+  # daadwerkelijk verwarmd of gekoeld wordt. LOW/MEDIUM/HIGH zijn vaste
+  # standen; AUTO kiest de stand op basis van het verschil t.o.v. het
+  # setpoint (herberekend bij elke overgang en elke minuut via enforce_state).
   - id: update_fan
     mode: restart
     then:
       - lambda: |-
           auto action = id(room_thermostat).action;
-          bool demand = (action == CLIMATE_ACTION_HEATING) || (action == CLIMATE_ACTION_COOLING);
-          if (!demand) {
+          bool heating = (action == CLIMATE_ACTION_HEATING);
+          bool cooling = (action == CLIMATE_ACTION_COOLING);
+          if (!heating && !cooling) {
             if (id(radiator_fan).state) {
               auto call = id(radiator_fan).turn_off();
               call.perform();
@@ -177,12 +182,26 @@ script:
             if (fm == CLIMATE_FAN_LOW) speed = 1;
             else if (fm == CLIMATE_FAN_MEDIUM) speed = 2;
             else if (fm == CLIMATE_FAN_HIGH) speed = 3;
+            else if (fm == CLIMATE_FAN_AUTO) {
+              // AUTO: stand kiezen op basis van het verschil t.o.v. setpoint
+              float room = id(kamer_temperatuur).state;
+              float target = heating ? id(room_thermostat).target_temperature_low
+                                     : id(room_thermostat).target_temperature_high;
+              if (isnan(room)) {
+                speed = 1;
+              } else {
+                float error = heating ? (target - room) : (room - target);
+                if (error >= ${fan_auto_high_error}f) speed = 3;
+                else if (error >= ${fan_auto_medium_error}f) speed = 2;
+                else speed = 1;
+              }
+            }
           }
           if (!id(radiator_fan).state || id(radiator_fan).speed != speed) {
             auto call = id(radiator_fan).turn_on();
             call.set_speed(speed);
             call.perform();
-            ESP_LOGD("jaga_climate", "Ventilator aan op stand %d", speed);
+            ESP_LOGD("jaga_climate", "Ventilator aan op stand %d/3", speed);
           }
 
   - id: start_cooling
