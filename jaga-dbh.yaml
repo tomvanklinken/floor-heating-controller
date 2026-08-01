@@ -48,7 +48,7 @@ substitutions:
   valve_close_sr_pin: "1"           # sn74hc595 pin -> L9110s IB
   valve_run_duration: "60s"
   valve_max_duration: "65s"
-  bemf_trigger_initial_value: "0.650"  # boards >= v61 : 0.650 | < v60 : 0.105
+  bemf_trigger_initial_value: "0.750"  # boards >= v61 | < v60 : 0.105
   adc_zero_calibration: "0.005"     # typisch 0.005 voor esp32-c3
   min_movement_initial: "5"         # minimale klepbeweging in %
   onboot_valve_calibration_delay: "1min"
