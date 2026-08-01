@@ -10,8 +10,6 @@ esphome:
       - climate.control:
           id: cooling_pid
           mode: "OFF"
-      - delay: ${onboot_valve_calibration_delay}
-      - script.execute: calibrate_valve
   project:
     name: "tomvanklinken.jaga-dbh-controller"
     version: "1.0.0"

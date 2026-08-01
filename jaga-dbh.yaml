@@ -51,7 +51,6 @@ substitutions:
   bemf_trigger_initial_value: "0.750"  # boards >= v61 | < v60 : 0.105
   adc_zero_calibration: "0.005"     # typisch 0.005 voor esp32-c3
   min_movement_initial: "5"         # minimale klepbeweging in %
-  onboot_valve_calibration_delay: "1min"
 
   # --------------------------- thermostaat -----------------------------------
   default_target_temperature_heat: "21 °C"

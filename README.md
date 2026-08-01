@@ -68,6 +68,15 @@ Alle overige defaults (doeltemperaturen, PID-parameters, pinnen, BEMF-trigger,
 enz.) staan in [jaga-dbh.yaml](jaga-dbh.yaml) en kun je per apparaat overriden
 in de `substitutions`.
 
+### Kalibratie
+
+De klepkalibratie draait alleen handmatig: druk eenmalig bij installatie
+(gemonteerd op de radiator) op de button **"Klep kalibreren"**. De positie
+blijft bewaard over reboots en hersynchroniseert bovendien vanzelf via de
+BEMF-eindstop bij elke volledige open/dicht-beweging. Tip: druk na het
+kalibreren op **"Herstart"**, dan wordt de positie direct naar flash
+geschreven (anders gebeurt dat op zijn laatst na een uur).
+
 ### Dallas-adressen vinden
 
 Druk op de button **"Zoek 1-wire adressen"** en kijk in de logs, of laat
@@ -78,7 +87,7 @@ Druk op de button **"Zoek 1-wire adressen"** en kijk in de logs, of laat
 ```
 jaga-dbh.yaml            # hoofd-package: defaults + includes
 packages/
-  core.yaml              # board (ESP32-C3), api, ota, logger, status-led
+  core.yaml              # board (ESP32-C3), api, ota, logger
   wifi.yaml              # wifi + fallback AP + captive portal
   time.yaml              # sntp + wekelijkse onderhouds-reboot
   diagnostics.yaml       # wifi-signaal, uptime, herstart-button

@@ -211,6 +211,10 @@ script:
   - id: enforce_state
     then:
       - lambda: |-
+          // Niet ingrijpen tijdens een (handmatige) kalibratie; de
+          // eerstvolgende run na afloop herstelt de juiste toestand.
+          if (id(calibrate_valve).is_running())
+            return;
           auto action = id(room_thermostat).action;
           // Koel-PID mag alleen draaien als de thermostaat om koeling vraagt
           if (id(cooling_pid).mode != CLIMATE_MODE_OFF && action != CLIMATE_ACTION_COOLING) {
@@ -232,6 +236,16 @@ script:
               && !isnan(id(dauwpunt).state)) {
             ESP_LOGD("jaga_climate", "Koelvraag zonder actieve PID - koeling gestart");
             id(start_cooling).execute();
+          }
+          // Warmtevraag maar klep niet open (bijv. omdat een kalibratie
+          // hem gesloten achterliet) -> openen
+          if (action == CLIMATE_ACTION_HEATING
+              && id(valve_cover).position < 0.99f
+              && id(valve_cover).current_operation == COVER_OPERATION_IDLE) {
+            ESP_LOGD("jaga_climate", "Warmtevraag maar klep niet open - openen");
+            auto call = id(valve_cover).make_call();
+            call.set_command_open();
+            call.perform();
           }
       - script.execute: update_fan
 
