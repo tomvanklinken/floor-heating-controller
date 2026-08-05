@@ -47,12 +47,12 @@ Maak in het ESPHome dashboard een nieuw apparaat aan met (zie
 
 ```yaml
 substitutions:
-  kamer: "stein"                     # -> device heet radiator-stein
-  bthome_mac: "38:1F:8D:C5:B5:E2"
+  kamer: "master-bedroom"                     # -> device heet radiator-master-bedroom
+  bthome_mac: "00:00:00:00:00:00"
   bthome_bindkey: "geheim"
   api_key: "geheim"                  # openssl rand -base64 32
-  dallas_aanvoer: "0x7b0725400b8d9528"
-  dallas_retour: "0x7807254009846228"
+  dallas_aanvoer: "0x0000000000000000"
+  dallas_retour: "0x0000000000000000"
 
 packages:
   jaga_dbh:

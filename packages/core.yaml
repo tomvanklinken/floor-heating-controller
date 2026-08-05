@@ -1,7 +1,7 @@
 # Board, API, OTA en logging voor de Nologo ESP32-C3 SuperMini
 esphome:
-  name: radiator-${kamer}
-  friendly_name: "Radiator ${kamer}"
+  name: dbh-${kamer}
+  friendly_name: "DBH ${kamer}"
   on_boot:
     priority: -200
     then:
